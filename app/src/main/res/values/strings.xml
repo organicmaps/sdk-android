@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="app_name">OM SDK Example</string>
+  <string name="my_position">My position</string>
+  <string name="zoom_in">Zoom in</string>
+  <string name="zoom_out">Zoom out</string>
+  <string name="location_denied">Location permission is denied, the position is unavailable</string>
+  <string name="init_failed">Failed to initialize Organic Maps: %1$s</string>
+</resources>

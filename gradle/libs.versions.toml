@@ -1,0 +1,16 @@
+[versions]
+agp = "9.2.1"
+organicmaps-sdk = "2026.07.04-5"
+desugaring = "2.1.5"
+material = "1.13.0"
+appcompat = "1.7.1"
+
+[libraries]
+organicmaps-sdk = { module = "app.organicmaps.sdk:sdk", version.ref = "organicmaps-sdk" }
+organicmaps-maps-world = { module = "app.organicmaps.sdk:maps-world", version.ref = "organicmaps-sdk" }
+android-tools-desugaring = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugaring" }
+google-material = { module = "com.google.android.material:material", version.ref = "material" }
+androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
