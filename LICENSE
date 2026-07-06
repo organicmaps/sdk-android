@@ -1,0 +1,8 @@
+For details about Organic Maps license, see https://github.com/organicmaps/organicmaps/tree/master#license-and-copyrights
+
+In short:
+- Organic Maps app and SDK source code is licensed under [Apache 2.0 license](https://github.com/organicmaps/organicmaps/blob/master/LICENSES/Apache-2.0.txt) and [notice](https://github.com/organicmaps/organicmaps/blob/master/NOTICE). 
+- All binary files (including maps) are licensed under [Organic Maps data license](https://github.com/organicmaps/organicmaps/blob/master/DATA_LICENSE.txt).
+- You can use Organic Maps code and binaries for free under the terms of these licenses. In particular, clearly mention to your users that your app is based on Organic Maps project and provide a clickable link to Organic Maps.
+- Note that map data also requires attribution from other projects, see details in the [data license](https://github.com/organicmaps/organicmaps/blob/master/DATA_LICENSE.txt)
+- If you need a white-label solution, reach us at [legal@organicmaps.app](legal@organicmaps.app)
