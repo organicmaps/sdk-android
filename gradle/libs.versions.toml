@@ -1,6 +1,6 @@
 [versions]
-agp = "9.2.1"
-organicmaps-sdk = "2026.07.04-5"
+agp = "9.4.1"
+organicmaps-sdk = "0.0.0-sdk-check"
 desugaring = "2.1.5"
 material = "1.13.0"
 appcompat = "1.7.1"

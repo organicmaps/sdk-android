@@ -4,13 +4,14 @@ plugins {
 
 android {
   namespace = "app.organicmaps.example"
-  compileSdk = 36
+  compileSdk = 37
 
   // Use the built-in Kotlin support of the Android Gradle Plugin 9+.
   enableKotlin = true
 
   buildFeatures {
     buildConfig = true
+    resValues = true
   }
 
   defaultConfig {
@@ -19,6 +20,28 @@ android {
     targetSdk = 36
     versionCode = 1
     versionName = "1.0"
+  }
+
+  flavorDimensions += "sample"
+  productFlavors {
+    create("basic") {
+      dimension = "sample"
+      applicationIdSuffix = ".basic"
+      manifestPlaceholders["sampleActivity"] = "app.organicmaps.example.MainActivity"
+      resValue("string", "app_name", "OM SDK Map")
+    }
+    create("offline") {
+      dimension = "sample"
+      applicationIdSuffix = ".offline"
+      manifestPlaceholders["sampleActivity"] = "app.organicmaps.example.OfflineSearchActivity"
+      resValue("string", "app_name", "OM SDK Offline Search")
+    }
+    create("routing") {
+      dimension = "sample"
+      applicationIdSuffix = ".routing"
+      manifestPlaceholders["sampleActivity"] = "app.organicmaps.example.RoutingActivity"
+      resValue("string", "app_name", "OM SDK Routing")
+    }
   }
 
   compileOptions {
@@ -47,12 +70,13 @@ android {
 }
 
 dependencies {
+  val sdkVersion = providers.gradleProperty("sdkVersion").getOrElse(libs.versions.organicmaps.sdk.get())
   // The Organic Maps SDK: rendering engine, offline maps framework, location.
-  implementation(libs.organicmaps.sdk)
+  implementation("app.organicmaps.sdk:sdk:$sdkVersion")
   // Optional: bundles the World overview maps for instant offline use (~70 MB).
   // Without this dependency, download them on the first start with
   // DownloadResourcesLegacyActivity natives (see how the Organic Maps app does it).
-  implementation(libs.organicmaps.maps.world)
+  implementation("app.organicmaps.sdk:maps-world:$sdkVersion")
 
   coreLibraryDesugaring(libs.android.tools.desugaring)
 

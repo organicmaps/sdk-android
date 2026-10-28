@@ -12,7 +12,7 @@
       android:theme="@style/Theme.OMExample">
 
     <activity
-        android:name=".MainActivity"
+        android:name="${sampleActivity}"
         android:exported="true"
         android:windowSoftInputMode="stateAlwaysHidden|adjustResize">
       <intent-filter>

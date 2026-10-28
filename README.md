@@ -1,203 +1,126 @@
-# Organic Maps Android SDK Example
+# Organic Maps Android SDK
 
-A minimal Android app demonstrating how to integrate the
-[Organic Maps](https://organicmaps.app) SDK: a fully **offline**,
-privacy-respecting map engine powered by
-[OpenStreetMap](https://www.openstreetmap.org) data.
+## Disclaimer
 
-| Offline map, place info | Dark map style |
+Note that Organic Maps SDK API can change at any time (because SDK component is a part of the main Organic Maps app).
+We do not guarantee API stability, and do not have enough resources to support legacy code.
+
+## Organic Maps Android SDK examples
+
+Three independently installable Android samples share the map and lifecycle setup:
+
+| Variant   | Integration demonstrated |
+|-----------|--------------------------|
+| `basic`   | Map rendering, location permission, position modes, place selection, themes and insets |
+| `offline` | Region-name search, downloads, progress, cancellation/retry, and offline POI search |
+| `routing` | Selected endpoints, walking/cycling/driving, build progress/errors, missing maps and foreground navigation |
+
+| Light map and place information | Dark map |
 |:---:|:---:|
 | ![Light](docs/screenshot-light.png) | ![Dark](docs/screenshot-dark.png) |
 
-The example shows:
+These screenshots show the basic integration. Additional variants expose controls
+in a scrollable panel above the map.
 
-- Native core initialization (`OrganicMaps`, `MapView`, `MapController`)
-- An interactive offline world map rendered with OpenGL ES
-- The "my position" button with runtime location permissions
-- Place selection: tap a city or any point to see its info
-- Light/dark map styles following the system theme
-- Zoom buttons and edge-to-edge layout with correct insets
+| Offline restaurant search | Walking route preview |
+|:---:|:---:|
+| ![Offline search](docs/screenshot-offline.png) | ![Routing](docs/screenshot-routing.png) |
 
-## Requirements
+## Build from a fresh SDK checkout
 
-- JDK 17+
-- Android SDK Platform 36 (`compileSdk = 36`)
-- An Android 5.0+ (API 21) device or emulator
-- Android NDK is **not** required to build this example. Without it, the build
-  prints an "Unable to strip liborganicmaps.so" warning and packages the
-  library with debug symbols as-is.
+Use JDK 21, Android SDK Platform 37 and an API 21+ device or emulator. The sample
+build needs no NDK: native libraries are supplied by the SDK AAR. A native stripping
+warning here does not imply that the producer shipped debug symbols; the SDK
+producer is responsible for stripping its libraries.
 
-## Build and run
+Until the SDK is publicly released, build its source and use an isolated Maven
+repository. With Organic Maps in a sibling `organicmaps` directory:
 
-> **Note:** the SDK has not been published to Maven Central yet. Until then,
-> build it locally (see below). After the SDK is released, this section will
-> shrink to just the `dependencies` block.
-
-1. Build the SDK and install it to the local Maven repository (`~/.m2`):
-
-   ```bash
-   git clone --recurse-submodules --shallow-submodules https://github.com/organicmaps/organicmaps.git
-   cd organicmaps
-   ./configure.sh
-   cd android
-   ./gradlew publishToMavenLocal
-   ```
-
-2. Check the published version and update `organicmaps-sdk` in
-   [gradle/libs.versions.toml](gradle/libs.versions.toml) if it differs:
-
-   ```bash
-   ls ~/.m2/repository/app/organicmaps/sdk/sdk/
-   ```
-
-3. Build, install and run the example:
-
-   ```bash
-   ./gradlew :app:installDebug
-   adb shell am start -n app.organicmaps.example/.MainActivity
-   ```
-
-   Or simply open this project in Android Studio and press Run.
-
-## Integration guide
-
-### 1. Add the dependencies
-
-The SDK is an ordinary Android library (AAR) with the native engine and the
-required map data (drawing styles, fonts, classifiers) inside:
-
-```kotlin
-dependencies {
-  implementation("app.organicmaps.sdk:sdk:<version>")
-  // Optional: bundles the World overview maps for instant offline use (~70 MB).
-  implementation("app.organicmaps.sdk:maps-world:<version>")
-}
+```bash
+cd ../organicmaps/android
+./gradlew -Parm64 -PsdkVersion=0.0.0-sdk-check publishSdkForChecks
+cd ../../sdk-android
+./gradlew -PsdkRepository=../organicmaps/android/build/sdk-check/repository -PsdkVersion=0.0.0-sdk-check checkSamples
 ```
 
-Optional add-ons published alongside the SDK:
+`-Parm64` publishes for arm64 devices/emulators; use `-Px86_64` for an Intel emulator.
+These flags affect the producer. Samples package the ABIs supplied by the AAR.
 
-| Artifact | Purpose |
-|---|---|
-| `maps-world` | Bundled `World.mwm` / `WorldCoasts.mwm` overview maps |
-| `location-google` | Fused location provider via Google Play Services |
-| `location-foss` | Fused location fallback for GMS-free devices |
-| `car` | Android Auto (`androidx.car.app`) integration |
-| `widgets-lanes`, `widgets-speedlimit` | Navigation UI widgets |
+`sdkRepository` restricts the SDK group to that repository, preventing a stale
+`mavenLocal()` or Central artifact from satisfying a check. `sdkVersion` overrides
+`gradle/libs.versions.toml`. Without `sdkRepository`, normal Maven repositories and
+`mavenLocal()` are used. After a public release, select the released version.
 
-Without `maps-world`, the map is empty until the World files are downloaded on
-the first start (see `DownloadResourcesLegacyActivity` natives and how the
-Organic Maps app uses them). Without a `location-*` module, the SDK falls back
-to the standard Android location providers, which is fine for most apps.
+Install an individual variant, retaining the same repository/version options:
 
-### 2. Configure packaging
-
-Two settings in `app/build.gradle.kts` are **required**:
-
-```kotlin
-android {
-  compileOptions {
-    // The SDK is built with core library desugaring; the Android Gradle Plugin
-    // refuses to build an app without it (checked via the AAR metadata).
-    isCoreLibraryDesugaringEnabled = true
-  }
-
-  // The native core reads .mwm maps and fonts directly from the APK using
-  // random access, so they must be stored uncompressed. Without this, the
-  // map data bundled in the AARs is deflated and the engine cannot load it.
-  androidResources {
-    noCompress += listOf("mwm", "ttf", "packed_polygons.bin")
-  }
-}
-
-dependencies {
-  coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
-}
+```bash
+./gradlew -PsdkRepository=../organicmaps/android/build/sdk-check/repository :app:installBasicDebug
+./gradlew -PsdkRepository=../organicmaps/android/build/sdk-check/repository :app:installOfflineDebug
+./gradlew -PsdkRepository=../organicmaps/android/build/sdk-check/repository :app:installRoutingDebug
 ```
 
-Location, network and storage permissions are declared in the SDK manifest and
-merged into your app automatically — runtime permission requests are still your
-app's job (see `MainActivity.onMyPositionModeChanged`).
+`checkSamples` checks Kotlin style, builds debug and minified release APKs for all
+variants, and runs lint. CI builds a fresh SDK source ref and runs the same command
+on pushes and pull requests, without Central credentials. The manual workflow's
+`sdk_ref` input selects an upstream branch or tag.
 
-### 3. Create the SDK entry point
+## Shared setup
 
-Create the `OrganicMaps` instance in your `Application`
-([ExampleApplication.kt](app/src/main/java/app/organicmaps/example/ExampleApplication.kt)):
+[ExampleApplication](app/src/main/java/app/organicmaps/example/ExampleApplication.kt)
+creates one SDK instance and owns map-loading readiness. Activities observe that
+state through their lifecycle. Repeating `OrganicMaps.init()` returns false without
+replaying its callback, including while the first asynchronous load is pending;
+application-owned readiness therefore also handles rotation during initial loading.
 
-```kotlin
-class ExampleApplication : Application() {
-  lateinit var organicMaps: OrganicMaps
-    private set
+[MainActivity](app/src/main/java/app/organicmaps/example/MainActivity.kt) binds a
+`MapController`, forwards lifecycle and widget insets, chooses light/dark styles,
+and handles location permissions. It aliases the SDK `Map` as `OMMap` to avoid the
+Kotlin collection-name clash. `app/build.gradle.kts` demonstrates core-library
+desugaring and uncompressed `mwm`, `ttf`, and `packed_polygons.bin` assets.
 
-  override fun onCreate() {
-    super.onCreate()
-    organicMaps = OrganicMaps(this, "example", BuildConfig.APPLICATION_ID,
-                              BuildConfig.VERSION_CODE, BuildConfig.VERSION_NAME)
-  }
-}
-```
+SDK consumer rules protect JNI access during R8 minification. Resource shrinking
+remains disabled because some resources are resolved by name. Release samples use
+a debug signing key so they can be installed locally.
 
-### 4. Initialize and show the map
+## Offline search
 
-Put `app.organicmaps.sdk.MapView` in the layout, then initialize the core and
-bind a `MapController` to the activity lifecycle
-([MainActivity.kt](app/src/main/java/app/organicmaps/example/MainActivity.kt)):
+In [OfflineSearchActivity](app/src/main/java/app/organicmaps/example/OfflineSearchActivity.kt):
 
-```kotlin
-override fun onCreate(savedInstanceState: Bundle?) {
-  super.onCreate(savedInstanceState)
-  organicMaps = (application as ExampleApplication).organicMaps
-  // Loads bundled maps and invokes the callback on the main thread.
-  // Returns false (and skips the callback) when already initialized,
-  // e.g. on activity recreation.
-  val callbackWillFire = organicMaps.init(::onCoreInitialized) // throws IOException
-  if (!callbackWillFire)
-    onCoreInitialized()
-}
+1. Find a small region such as Liechtenstein and select its catalogue name.
+2. Tap Download. The sample checks storage and reports progress/errors; Cancel
+   leaves installed maps intact and Retry requeues failed downloads.
+3. After completion, search for a place or category. Disconnect the network to
+   exercise offline search.
 
-private fun onCoreInitialized() {
-  setContentView(R.layout.activity_main)
-  val controller = MapController(findViewById(R.id.map), organicMaps.locationHelper,
-                                 mapRenderingListener, null, false)
-  lifecycle.addObserver(controller)
-}
-```
+Each request has a new ID. Result updates replace the current list. Native indexes
+are preserved when suggestions are filtered out. Stopping the activity removes
+listeners and invalidates pending requests. Downloads are independent of those UI
+subscriptions.
 
-Everything else — location modes, place taps, map styles, zoom — is a few
-lines each; see the comments in
-[MainActivity.kt](app/src/main/java/app/organicmaps/example/MainActivity.kt).
+## Routing
 
-## Good to know
+In [RoutingActivity](app/src/main/java/app/organicmaps/example/RoutingActivity.kt),
+tap places and assign an origin and destination, choose a profile, then build.
+Missing detailed maps are offered for explicit download, followed by a rebuild.
+Each variant has its own application ID and map storage; downloaded maps are not
+shared between installed variants.
 
-- **`Map` name clash (Kotlin):** the SDK class `app.organicmaps.sdk.Map`
-  shadows `kotlin.collections.Map`; import it with an alias:
-  `import app.organicmaps.sdk.Map as OMMap`.
-- **R8/ProGuard:** minified builds work out of the box — the SDK ships
-  consumer R8 rules (the native code calls Java classes and methods by name,
-  so they must not be renamed or stripped). The example release build has
-  `minifyEnabled = true` to prove it. Avoid `shrinkResources` for now: some
-  SDK drawables are looked up by name at runtime.
-- **APK size:** the SDK AAR carries the engine (per-ABI `.so`) and ~40 MB of
-  map data assets; `maps-world` adds ~70 MB. Use Android App Bundles so users
-  download only their ABI.
-- **Downloading regions:** country maps with full detail (POIs, streets,
-  search, routing) are managed by `app.organicmaps.sdk.downloader.MapManager`.
-  The bundled World map intentionally contains only an overview.
-- **More SDK surface** to explore beyond this example: `search`, `routing`,
-  `bookmarks`, `editor`, `maplayer` (subway/isolines/traffic) packages, and the
-  [Organic Maps app](https://github.com/organicmaps/organicmaps/tree/master/android)
-  itself — the most complete SDK consumer.
+For navigation, enable the position button and obtain a fix, then use that position
+as the origin. The sample reports progress, route errors, and guidance updates.
+Stop ends the route. Rotation preserves route state and restores its container.
+Leaving the app cancels navigation: this foreground-only example does not install
+a navigation foreground service or TTS UI.
 
-## Support
+## Suggested device checks
 
-- Email: [sdk@organicmaps.app](mailto:sdk@organicmaps.app)
-- Bugs and feature requests:
-  [github.com/organicmaps/organicmaps/issues](https://github.com/organicmaps/organicmaps/issues)
+- Rotate during initial loading, after rendering, and during a route build.
+- Switch system light/dark appearance; deny location permission, then grant it.
+- Exercise failed/cancelled downloads and overlapping search requests.
+- Build with missing maps, download them, and navigate from a real or injected fix.
+- Repeat on minified release APKs, including returning from the background.
 
-## License
+## License and support
 
-See [LICENSE](LICENSE). The SDK code is Apache 2.0; map data and other binary
-files are covered by the
-[Organic Maps Binary Data License](https://github.com/organicmaps/organicmaps/blob/master/DATA_LICENSE.txt).
-Apps using the SDK must clearly mention they are based on Organic Maps and
-provide a clickable link to [organicmaps.app](https://organicmaps.app), and
-keep the OpenStreetMap attribution visible on the map.
+- See [LICENSE](LICENSE) for details.
+- Report SDK-specific issues here in [organicmaps/sdk-android/issues][https://github.com/organicmaps/sdk-android/issues].
+- Report Organic Maps issues in [organicmaps/organicmaps/issues](https://github.com/organicmaps/organicmaps/issues).

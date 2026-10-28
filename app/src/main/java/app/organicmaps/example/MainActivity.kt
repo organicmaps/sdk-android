@@ -5,11 +5,13 @@ import android.content.res.Configuration
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import app.organicmaps.sdk.Framework
 import app.organicmaps.sdk.Map as OMMap
@@ -37,15 +39,16 @@ import java.util.Locale
  * The SDK class [app.organicmaps.sdk.Map] is imported as `OMMap`
  * to avoid clashing with [kotlin.collections.Map].
  */
-class MainActivity :
+open class MainActivity :
     AppCompatActivity(),
     MapRenderingListener,
     PlacePageActivationListener,
     LocationState.ModeChangeListener {
-    private lateinit var organicMaps: OrganicMaps
+    protected lateinit var organicMaps: OrganicMaps
     private var mapController: MapController? = null
     private lateinit var myPositionFab: FloatingActionButton
     private var placeSnackbar: Snackbar? = null
+    private var pendingLocationPermissionResult = false
 
     private val locationPermissionsRequest =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions(), ::onLocationPermissionsResult)
@@ -60,25 +63,21 @@ class MainActivity :
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        organicMaps = (application as ExampleApplication).organicMaps
-
-        // Initialize the native core: create platform directories and load bundled maps.
-        // The callback is invoked on the main thread when maps are loaded. On the second
-        // and subsequent calls (e.g. on activity recreation) init() returns false and
-        // the callback is not invoked because everything is initialized already.
-        val callbackWillFire = try {
-            organicMaps.init(::onCoreInitialized)
+        val app = application as ExampleApplication
+        organicMaps = app.organicMaps
+        app.ready.observe(this) { ready ->
+            if (ready && mapController == null && !isFinishing && !isDestroyed) onCoreInitialized()
+        }
+        try {
+            app.initialize()
         } catch (e: IOException) {
             Toast.makeText(this, getString(R.string.init_failed, e.message), Toast.LENGTH_LONG).show()
             finish()
             return
         }
-        if (!callbackWillFire) {
-            onCoreInitialized()
-        }
     }
 
-    private fun onCoreInitialized() {
+    protected open fun onCoreInitialized() {
         if (isFinishing || isDestroyed) {
             return
         }
@@ -90,6 +89,10 @@ class MainActivity :
         val isNightMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
             Configuration.UI_MODE_NIGHT_YES
         val mapStyle = if (isNightMode) MapStyle.Dark else MapStyle.Clear
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = !isNightMode
+            isAppearanceLightNavigationBars = !isNightMode
+        }
         if (OMMap.isEngineCreated()) {
             MapStyle.set(mapStyle)
         } else {
@@ -124,7 +127,9 @@ class MainActivity :
                 bottomMargin = fabMargin + insets.bottom
             }
             mapButtons.requestLayout()
-            mapController?.updateCompassOffset(insets.right, insets.top)
+            findViewById<View>(R.id.sample_scroll).setPadding(insets.left, insets.top, insets.right, 0)
+            val mapTopMargin = (findViewById<View>(R.id.map).layoutParams as ViewGroup.MarginLayoutParams).topMargin
+            mapController?.updateCompassOffset(insets.right, (insets.top - mapTopMargin).coerceAtLeast(0))
             mapController?.updateBottomWidgetsOffset(insets.left, insets.bottom)
             windowInsets
         }
@@ -132,6 +137,22 @@ class MainActivity :
         onBackPressedDispatcher.addCallback(this, closePlacePageOnBack)
         Framework.nativePlacePageActivationListener(this)
         LocationState.nativeSetListener(this)
+        if (OMMap.isEngineCreated()) onMyPositionModeChanged(LocationState.getMode())
+        processPendingLocationPermissionResult()
+    }
+
+    protected fun samplePanel(): LinearLayout {
+        val panelHeight = resources.displayMetrics.heightPixels / 2
+        findViewById<View>(R.id.sample_scroll).apply {
+            visibility = View.VISIBLE
+            layoutParams.height = panelHeight
+        }
+        findViewById<View>(R.id.map).apply {
+            val margins = layoutParams as ViewGroup.MarginLayoutParams
+            margins.topMargin = panelHeight
+            layoutParams = margins
+        }
+        return findViewById(R.id.sample_panel)
     }
 
     override fun onResume() {
@@ -194,6 +215,25 @@ class MainActivity :
     }
 
     private fun onLocationPermissionsResult(grants: Map<String, Boolean>) {
+        pendingLocationPermissionResult = true
+        processPendingLocationPermissionResult()
+    }
+
+    override fun onRenderingCreated() {
+        processPendingLocationPermissionResult()
+    }
+
+    override fun onRenderingRestored() {
+        processPendingLocationPermissionResult()
+    }
+
+    private fun processPendingLocationPermissionResult() {
+        if (!pendingLocationPermissionResult || mapController == null || !OMMap.isEngineCreated() ||
+            isFinishing || isDestroyed
+        ) {
+            return
+        }
+        pendingLocationPermissionResult = false
         if (!LocationUtils.checkLocationPermission(this)) {
             Snackbar.make(findViewById(R.id.root), R.string.location_denied, Snackbar.LENGTH_LONG).show()
             return
