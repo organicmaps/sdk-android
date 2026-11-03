@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <item name="region_query" type="id" />
+  <item name="place_query" type="id" />
+  <item name="search_results" type="id" />
+  <item name="search_status" type="id" />
+  <item name="region_status" type="id" />
+  <item name="route_status" type="id" />
+  <item name="route_endpoints" type="id" />
+  <item name="route_profile" type="id" />
+  <item name="missing_maps" type="id" />
+  <item name="download_missing_maps" type="id" />
+  <item name="start_navigation" type="id" />
+</resources>
