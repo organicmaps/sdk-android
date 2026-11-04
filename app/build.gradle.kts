@@ -2,6 +2,8 @@ plugins {
     alias(libs.plugins.android.application)
 }
 
+val consumerFlavors = listOf("consumerNative", "consumerGoogle", "consumerFoss")
+
 android {
     namespace = "app.organicmaps.example"
     compileSdk = providers.gradleProperty("propCompileSdkVersion").get().toInt()
@@ -45,6 +47,19 @@ android {
         }
     }
 
+    consumerFlavors.forEach { sample ->
+        productFlavors.create(sample) {
+            dimension = "sample"
+            applicationIdSuffix = ".$sample"
+            manifestPlaceholders["sampleActivity"] = "app.organicmaps.example.ConsumerActivity"
+            resValue("string", "app_name", "OM SDK Consumer (${sample.removePrefix("consumer")})")
+        }
+        sourceSets.named(sample) {
+            kotlin.directories += "src/consumer/java"
+            res.srcDir("src/consumer/res")
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -77,6 +92,14 @@ dependencies {
     // Bundles overview maps; detailed offline search and routing still require region downloads.
     implementation("app.organicmaps.sdk:maps-world:$sdkVersion")
 
+    consumerFlavors.forEach { sample ->
+        listOf("car", "widgets-lanes", "widgets-speedlimit").forEach { artifact ->
+            add("${sample}Implementation", "app.organicmaps.sdk:$artifact:$sdkVersion")
+        }
+    }
+    "consumerGoogleImplementation"("app.organicmaps.sdk:location-google:$sdkVersion")
+    "consumerFossImplementation"("app.organicmaps.sdk:location-foss:$sdkVersion")
+
     coreLibraryDesugaring(libs.android.tools.desugaring)
 
     implementation(libs.androidx.appcompat)
@@ -86,3 +109,5 @@ dependencies {
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.junit)
 }
+
+apply(from = rootProject.file("gradle/sdk-consumer-checks.gradle.kts"))

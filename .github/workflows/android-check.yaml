@@ -3,6 +3,18 @@ on:
   push:
     branches: [master]
   pull_request:
+  workflow_call:
+    inputs:
+      sdk_version:
+        description: Published Maven Central SDK version for a release check
+        type: string
+      sdk_ref:
+        description: SDK source ref for development checks (ignored when sdk_version is set)
+        type: string
+      samples_ref:
+        description: Examples revision containing this workflow
+        required: true
+        type: string
   workflow_dispatch:
     inputs:
       sdk_version:
@@ -14,7 +26,7 @@ on:
 
 env:
   # Baseline for source integration checks; release checks use sdk_version.
-  SDK_REF: 49a72dc936db4e27b65673100680677680c736ee
+  SDK_REF: f629c29ac7e523abf982a984ca089ba939b93c9e
   SAMPLES_SDK_VERSION: ${{ inputs.sdk_version || '0.0.0-sdk-check' }}
   SAMPLES_SDK_REPOSITORY: ${{ inputs.sdk_version && 'https://repo.maven.apache.org/maven2' || format('{0}/engine/android/build/sdk-check/repository', github.workspace) }}
 
@@ -23,7 +35,7 @@ permissions:
 
 concurrency:
   # SDK releases and source revisions have independent compatibility results.
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ inputs.sdk_version || inputs.sdk_ref || 'baseline' }}
+  group: ${{ github.workflow }}-samples-${{ github.event.pull_request.number || github.ref }}-${{ inputs.sdk_version || inputs.sdk_ref || 'baseline' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -35,6 +47,8 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          repository: organicmaps/sdk-android
+          ref: ${{ inputs.samples_ref || github.sha }}
           path: samples
       - uses: actions/checkout@v6
         if: ${{ !inputs.sdk_version }}
@@ -66,12 +80,16 @@ jobs:
       - name: Build, lint and check Kotlin style for all samples
         working-directory: samples
         run: ./gradlew -PsdkRepository="$SAMPLES_SDK_REPOSITORY" -PsdkVersion="$SAMPLES_SDK_VERSION" checkSamples
+      - name: Verify packaged SDK runtime
+        if: ${{ !inputs.sdk_version }}
+        working-directory: engine/android
+        run: bash ../.github/scripts/check-sdk-aar.sh sdk/build/outputs/aar/sdk-release.aar
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      - name: Exercise sample lifecycle and result-list gestures
+      - name: Exercise sample lifecycle and the minified release consumer
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
@@ -79,9 +97,11 @@ jobs:
           target: default
           profile: pixel_2
           working-directory: samples
-          script: ./gradlew --continue -PsdkRepository="$SAMPLES_SDK_REPOSITORY" -PsdkVersion="$SAMPLES_SDK_VERSION" connectedSamples
+          script: ./gradlew --continue -PsdkRepository="$SAMPLES_SDK_REPOSITORY" -PsdkVersion="$SAMPLES_SDK_VERSION" connectedSamples verifyConnectedConsumer
       - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: sample-reports
-          path: samples/app/build/reports
+          path: |
+            samples/app/build/reports
+            samples/runtime-checks/build/reports
