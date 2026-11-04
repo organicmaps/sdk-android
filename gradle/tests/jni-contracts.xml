@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Minimal dexdump XML, with repeated packages as emitted for classes in multiple DEX files. -->
+<api>
+  <package name="app.organicmaps.sdk.util">
+    <class name="HttpClient">
+      <method name="runAsync" static="true" abstract="false" return="okhttp3.Call">
+        <parameter name="arg0" type="app.organicmaps.sdk.util.HttpClient$Params" />
+        <parameter name="arg1" type="long" />
+      </method>
+    </class>
+  </package>
+  <package name="okhttp3">
+    <class name="Call" />
+  </package>
+  <package name="app.organicmaps.sdk.util">
+    <class name="HttpClient$Params" />
+  </package>
+  <package name="">
+    <class name="a">
+      <method name="cancel" static="false" abstract="false" return="void">
+      </method>
+    </class>
+  </package>
+</api>

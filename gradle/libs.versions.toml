@@ -17,3 +17,4 @@ androidx-test-junit = { module = "androidx.test.ext:junit", version.ref = "andro
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
+android-test = { id = "com.android.test", version.ref = "agp" }

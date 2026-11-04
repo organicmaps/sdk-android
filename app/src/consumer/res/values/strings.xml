@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="consumer_widgets">Navigation widget previews</string>
+  <item name="consumer_lanes" type="id" />
+  <item name="consumer_speed_limit" type="id" />
+</resources>
