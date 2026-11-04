@@ -14,7 +14,7 @@ on:
 
 env:
   # Baseline for source integration checks; release checks use sdk_version.
-  SDK_REF: 9b5343caf0d19f1a6e06511fdac5d6f7e59a1f12
+  SDK_REF: 49a72dc936db4e27b65673100680677680c736ee
   SAMPLES_SDK_VERSION: ${{ inputs.sdk_version || '0.0.0-sdk-check' }}
   SAMPLES_SDK_REPOSITORY: ${{ inputs.sdk_version && 'https://repo.maven.apache.org/maven2' || format('{0}/engine/android/build/sdk-check/repository', github.workspace) }}
 
@@ -22,7 +22,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  # SDK releases and source revisions have independent compatibility results.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ inputs.sdk_version || inputs.sdk_ref || 'baseline' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
