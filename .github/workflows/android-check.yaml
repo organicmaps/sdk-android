@@ -5,13 +5,18 @@ on:
   pull_request:
   workflow_dispatch:
     inputs:
+      sdk_version:
+        description: Published Maven Central SDK version for a release check
+        type: string
       sdk_ref:
-        description: Organic Maps source ref (defaults to the pinned integration revision)
+        description: SDK source ref for development checks (ignored when sdk_version is set)
         type: string
 
 env:
-  # Contains publishSdkForChecks from organicmaps/organicmaps#14025.
+  # Baseline for source integration checks; release checks use sdk_version.
   SDK_REF: 9b5343caf0d19f1a6e06511fdac5d6f7e59a1f12
+  SAMPLES_SDK_VERSION: ${{ inputs.sdk_version || '0.0.0-sdk-check' }}
+  SAMPLES_SDK_REPOSITORY: ${{ inputs.sdk_version && 'https://repo.maven.apache.org/maven2' || format('{0}/engine/android/build/sdk-check/repository', github.workspace) }}
 
 permissions:
   contents: read
@@ -31,12 +36,14 @@ jobs:
         with:
           path: samples
       - uses: actions/checkout@v6
+        if: ${{ !inputs.sdk_version }}
         with:
           repository: organicmaps/organicmaps
           ref: ${{ inputs.sdk_ref || env.SDK_REF }}
           path: engine
           fetch-depth: 200
       - name: Initialize SDK dependencies
+        if: ${{ !inputs.sdk_version }}
         working-directory: engine
         run: git submodule update --init --recursive --depth 1 --jobs 8
       - uses: gradle/actions/wrapper-validation@v4
@@ -46,16 +53,18 @@ jobs:
           java-version: 21
       - uses: gradle/actions/setup-gradle@v4
       - name: Cache native compilation
+        if: ${{ !inputs.sdk_version }}
         uses: hendrikmuhs/ccache-action@v1.2.24
         with:
           key: sdk-samples
           save: ${{ github.ref == 'refs/heads/master' }}
       - name: Publish fresh SDK artifacts for the samples
+        if: ${{ !inputs.sdk_version }}
         working-directory: engine/android
-        run: ./gradlew -Px86_64 -PsdkVersion=0.0.0-sdk-check publishSdkForChecks
+        run: ./gradlew -Px86_64 -PsdkVersion="$SAMPLES_SDK_VERSION" publishSdkForChecks
       - name: Build, lint and check Kotlin style for all samples
         working-directory: samples
-        run: ./gradlew -PsdkRepository="$GITHUB_WORKSPACE/engine/android/build/sdk-check/repository" -PsdkVersion=0.0.0-sdk-check checkSamples
+        run: ./gradlew -PsdkRepository="$SAMPLES_SDK_REPOSITORY" -PsdkVersion="$SAMPLES_SDK_VERSION" checkSamples
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -67,8 +76,9 @@ jobs:
           api-level: 35
           arch: x86_64
           target: default
+          profile: pixel_2
           working-directory: samples
-          script: ./gradlew -PsdkRepository="$GITHUB_WORKSPACE/engine/android/build/sdk-check/repository" -PsdkVersion=0.0.0-sdk-check connectedSamples
+          script: ./gradlew --continue -PsdkRepository="$SAMPLES_SDK_REPOSITORY" -PsdkVersion="$SAMPLES_SDK_VERSION" connectedSamples
       - uses: actions/upload-artifact@v7
         if: always()
         with:
