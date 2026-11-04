@@ -12,7 +12,9 @@ Each app has separate map storage. Route planning survives rotation and backgrou
 foreground navigation ends on arrival, Stop, backgrounding, or closing the activity.
 Downloads continue independently of the screen and offer cancellation and retry.
 
-The SDK API is experimental and may change. See the
+The SDK is a side product of the main Organic Maps application. Its application
+and SDK implementation are the source of truth; API stability is not guaranteed.
+These examples must adapt when SDK changes break integration. See the
 [SDK integration guide](https://github.com/organicmaps/organicmaps/blob/9b5343caf0d19f1a6e06511fdac5d6f7e59a1f12/android/sdk/README.md)
 for initialization, lifecycle, permissions, packaging, and API contracts.
 
@@ -21,7 +23,7 @@ for initialization, lifecycle, permissions, packaging, and API contracts.
 Use **JDK 21**, **Android SDK Platform 37**, and an **API 21+** device or emulator.
 The examples consume native libraries from SDK AARs and do not need an NDK.
 
-Until a public SDK release is available, publish its artifacts locally. The revision
+For development with SDK source, publish its artifacts locally. The revision
 below contains `publishSdkForChecks` from
 [organicmaps/organicmaps#14025](https://github.com/organicmaps/organicmaps/pull/14025).
 Building that checkout requires the upstream
@@ -58,11 +60,32 @@ On a matching connected device or emulator:
 ./gradlew -PsdkRepository=../organicmaps/android/build/sdk-check/repository -PsdkVersion=0.0.0-sdk-check connectedSamples
 ```
 
-CI publishes the pinned SDK into an isolated repository and runs these checks on an
-API 35 emulator. The manual workflow's `sdk_ref` input selects another SDK revision.
+For source integration checks, CI publishes the pinned SDK into an isolated
+repository and runs these checks on an API 35 emulator. The manual workflow's
+`sdk_ref` input selects another source revision when `sdk_version` is empty.
 For device checks, also exercise denied/disabled location, rotation during loading,
 light/dark themes, cancelled downloads, missing-map routing, and navigation arrival;
 repeat with minified release APKs.
+
+## Check every SDK release
+
+After each SDK release is available on Maven Central, run this repository's
+`Android SDK Samples` workflow with that published version:
+
+```sh
+gh workflow run android-check.yaml --repo organicmaps/sdk-android -f 'sdk_version=<published-version>'
+```
+
+This mode resolves the SDK group exclusively from Maven Central and skips SDK
+source checkout, native compilation, and local publication. It builds and lints
+debug/minified release examples and runs their instrumentation tests. The same
+check can be started by release automation with access to this repository.
+
+If SDK changes require consumer updates, fix the examples here and rerun the check.
+Consumer compatibility does not gate changes in `organicmaps/organicmaps`.
+Keep the baseline SDK version/source pin current after adopting a release and
+exercise minified release APKs on a device for JNI/R8 checks. Resource shrinking
+is disabled here and needs separate validation of resources resolved by name.
 
 ## License and support
 
