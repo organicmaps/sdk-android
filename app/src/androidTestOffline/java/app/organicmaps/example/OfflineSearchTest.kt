@@ -21,6 +21,7 @@ import app.organicmaps.sdk.search.SearchResult
 import java.util.Locale
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -153,6 +154,26 @@ class OfflineSearchTest :
     }
 
     @Test
+    fun selectedDownloadCanBeCancelled() {
+        launchOffline().use { scenario ->
+            findRegions(scenario, "Andorra")
+            scenario.await { regionsComplete && regionResults.isNotEmpty() }
+            scenario.onActivity {
+                it.findViewById<ListView>(R.id.search_results).performItemClick(null, 0, 0)
+                // One UI turn prevents completion from racing the cancellation check.
+                it.click(R.string.download_region)
+                try {
+                    assertTrue(MapManager.isDownloading())
+                    it.click(R.string.cancel_download)
+                    assertFalse(MapManager.isDownloading())
+                } finally {
+                    MapManager.cancel("Andorra")
+                }
+            }
+        }
+    }
+
+    @Test
     fun downloadEventsPreserveSearchFeedback() {
         launchOffline().use { scenario ->
             findRegions(scenario, "Andorra")
@@ -165,7 +186,10 @@ class OfflineSearchTest :
                 val search = activity.findViewById<TextView>(R.id.search_status)
                 val region = activity.findViewById<TextView>(R.id.region_status)
                 val searchFeedback = search.text.toString()
-                activity.onProgress("Andorra", 50, 100)
+                // Different map and terrain fractions distinguish combined progress from either stream alone.
+                activity.onProgress("Andorra", MapManager.Progress(25, 100, 75, 100))
+                assertEquals(activity.getString(R.string.download_progress, 50), region.text.toString())
+                activity.onProgress("Andorra", MapManager.Progress(0, 0, 0, 0))
                 assertEquals(activity.getString(R.string.download_progress, 50), region.text.toString())
                 activity.onStatusChanged(
                     listOf(MapManager.StorageCallbackData("Germany", CountryItem.STATUS_DONE, 0, false)),
