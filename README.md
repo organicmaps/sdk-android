@@ -15,7 +15,7 @@ Downloads continue independently of the screen and offer cancellation and retry.
 The SDK is a side product of the main Organic Maps application. Its application
 and SDK implementation are the source of truth; API stability is not guaranteed.
 These examples must adapt when SDK changes break integration. See the
-[SDK integration guide](https://github.com/organicmaps/organicmaps/blob/49a72dc936db4e27b65673100680677680c736ee/android/sdk/README.md)
+[SDK integration guide](https://github.com/organicmaps/organicmaps/blob/e757eeaca3664767dceec1bf33214e04023a2342/android/sdk/README.md)
 for initialization, lifecycle, permissions, packaging, and API contracts.
 
 ## Build and run
@@ -27,11 +27,11 @@ For development with SDK source, publish its artifacts locally. The merged revis
 below provides `publishSdkForChecks`, documented in
 [organicmaps/organicmaps#14025](https://github.com/organicmaps/organicmaps/pull/14025).
 Building that checkout requires the upstream
-[native build environment](https://github.com/organicmaps/organicmaps/blob/49a72dc936db4e27b65673100680677680c736ee/docs/INSTALL.md).
+[native build environment](https://github.com/organicmaps/organicmaps/blob/e757eeaca3664767dceec1bf33214e04023a2342/docs/INSTALL.md).
 With an Organic Maps checkout in the sibling `organicmaps` directory:
 
 ```sh
-git -C ../organicmaps fetch origin 49a72dc936db4e27b65673100680677680c736ee
+git -C ../organicmaps fetch origin e757eeaca3664767dceec1bf33214e04023a2342
 git -C ../organicmaps checkout --detach FETCH_HEAD
 git -C ../organicmaps submodule update --init --recursive --depth 1
 (cd ../organicmaps/android && ./gradlew -Parm64 -PsdkVersion=0.0.0-sdk-check publishSdkForChecks)

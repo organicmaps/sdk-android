@@ -14,7 +14,7 @@ on:
 
 env:
   # Baseline for source integration checks; release checks use sdk_version.
-  SDK_REF: 49a72dc936db4e27b65673100680677680c736ee
+  SDK_REF: e757eeaca3664767dceec1bf33214e04023a2342
   SAMPLES_SDK_VERSION: ${{ inputs.sdk_version || '0.0.0-sdk-check' }}
   SAMPLES_SDK_REPOSITORY: ${{ inputs.sdk_version && 'https://repo.maven.apache.org/maven2' || format('{0}/engine/android/build/sdk-check/repository', github.workspace) }}
 
@@ -65,7 +65,12 @@ jobs:
         run: ./gradlew -Px86_64 -PsdkVersion="$SAMPLES_SDK_VERSION" publishSdkForChecks
       - name: Build, lint and check Kotlin style for all samples
         working-directory: samples
-        run: ./gradlew -PsdkRepository="$SAMPLES_SDK_REPOSITORY" -PsdkVersion="$SAMPLES_SDK_VERSION" checkSamples
+        shell: bash
+        run: |
+          mkdir -p app/build/ci-diagnostics
+          ./gradlew --console=plain --stacktrace \
+            -PsdkRepository="$SAMPLES_SDK_REPOSITORY" -PsdkVersion="$SAMPLES_SDK_VERSION" \
+            checkSamples 2>&1 | tee app/build/ci-diagnostics/check-samples.log
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -73,15 +78,23 @@ jobs:
           sudo udevadm trigger --name-match=kvm
       - name: Exercise sample lifecycle and result-list gestures
         uses: reactivecircus/android-emulator-runner@v2
+        timeout-minutes: 40
         with:
           api-level: 35
           arch: x86_64
           target: default
           profile: pixel_2
           working-directory: samples
-          script: ./gradlew --continue -PsdkRepository="$SAMPLES_SDK_REPOSITORY" -PsdkVersion="$SAMPLES_SDK_VERSION" connectedSamples
-      - uses: actions/upload-artifact@v7
+          # Collect device diagnostics before this action shuts down the emulator.
+          script: bash .github/scripts/connected-samples.sh
+      - name: Upload sample reports and diagnostics
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: sample-reports
-          path: samples/app/build/reports
+          path: |
+            samples/app/build/reports
+            samples/app/build/outputs/androidTest-results
+            samples/app/build/outputs/connected_android_test_additional_output
+            samples/app/build/ci-diagnostics
+            samples/build/reports

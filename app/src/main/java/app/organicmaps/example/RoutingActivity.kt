@@ -179,7 +179,7 @@ class RoutingActivity :
         if (storageSlot >= 0) {
             // Navigation has no foreground service; planning can remain alive while the activity is stopped.
             if (!isChangingConfigurations && routing.isNavigating) routing.cancel()
-            routing.detach()
+            routing.detach(this)
             MapManager.nativeUnsubscribe(storageSlot)
             storageSlot = -1
         }
@@ -199,7 +199,7 @@ class RoutingActivity :
         outState.putInt("profile", selectedProfile)
         buildError?.let { outState.putInt("buildError", it) }
         outState.putInt("message", message)
-        if (initialized) routing.onSaveState()
+        if (initialized) routing.onSaveState(this)
         super.onSaveInstanceState(outState)
     }
 
@@ -217,11 +217,6 @@ class RoutingActivity :
         routing.cancel()
         clearBuildState(R.string.inputs_changed)
         updateMenu()
-    }
-
-    override fun showRoutePlan(show: Boolean, completionListener: Runnable?) {
-        // The controller starts the build from this continuation, even with always-visible controls.
-        completionListener?.run()
     }
 
     override fun updateMenu() {
@@ -252,7 +247,7 @@ class RoutingActivity :
 
             waitingForMaps -> getString(
                 R.string.download_progress,
-                MapManager.nativeGetOverallProgress(missingMaps.toTypedArray()),
+                MapManager.getOverallProgress(missingMaps.toTypedArray()),
             )
 
             routing.isNavigating -> getString(R.string.navigating)
@@ -316,7 +311,7 @@ class RoutingActivity :
         updateMenu()
     }
 
-    override fun onProgress(countryId: String, localSize: Long, remoteSize: Long) {
+    override fun onProgress(countryId: String, progress: MapManager.Progress) {
         if (countryId in missingMaps) updateMenu()
     }
 

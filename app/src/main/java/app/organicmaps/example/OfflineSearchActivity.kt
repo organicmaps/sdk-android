@@ -61,7 +61,7 @@ class OfflineSearchActivity :
         val downloads = LinearLayout(this)
         panel.addView(downloads)
         downloads.button(R.string.download_region) { selectedRegion?.let(::download) }
-        downloads.button(R.string.cancel_download) { selectedRegion?.let(MapManager::nativeCancel) }
+        downloads.button(R.string.cancel_download) { selectedRegion?.let(MapManager::cancel) }
         downloads.button(R.string.retry_download) { selectedRegion?.let(::download) }
         regionStatus = TextView(this).apply {
             id = R.id.region_status
@@ -177,9 +177,11 @@ class OfflineSearchActivity :
         if (data.any { it.countryId == selectedRegion }) refreshRegion()
     }
 
-    override fun onProgress(countryId: String, localSize: Long, remoteSize: Long) {
-        if (countryId == selectedRegion && remoteSize > 0) {
-            regionStatus.text = getString(R.string.download_progress, localSize * 100 / remoteSize)
+    override fun onProgress(countryId: String, progress: MapManager.Progress) {
+        if (countryId != selectedRegion) return
+        val total = progress.totalBytes
+        if (total > 0) {
+            regionStatus.text = getString(R.string.download_progress, progress.downloadedBytes * 100 / total)
         }
     }
 
