@@ -26,3 +26,4 @@ dependencyResolutionManagement {
 rootProject.name = "organicmaps-sdk-example"
 
 include(":app")
+include(":runtime-checks")
